@@ -1,6 +1,6 @@
 import tkinter as tk
-# root = tk.Tk()
-# root.title("root")
+root = tk.Tk()
+root.title("root")
 
 import csv
 import numpy as np
@@ -23,7 +23,7 @@ STRIP_END = 10.0        #miliseconds to strip from the end of the data
 A_WAVE_START = 105.0      #milisecond the A wave starts at
 A_WAVE_END = 300.0        #milisecond the A wave ends at
 
-COL_TO_PLOT = 4         #column of data in sheet file to plot
+COL_TO_PLOT = 3         #column of data in sheet file to plot
 
 
 def a_wave_func(x,a,b,c):
@@ -39,7 +39,9 @@ def a_wave_func(x,a,b,c):
 
 #Locate sheet files
 def read_sheets():
+
     name = askopenfilename(initialdir = "~/py3eg/", title = "Select File", filetypes=[("Sheet files","*.sheet")])
+
     return name
 
 class DataFile:
@@ -108,11 +110,11 @@ class DataFile:
             self.dataOS += [time + [nums]]
             #strip first and last 2 columns, convert to numbers
 
-        # if log:
-            # print("--LOG: OD")
-            # self.log_print_data(self.dataOD)
-            # print('--LOG: OS')
-            # self.log_print_data(self.dataOS)
+        if log > 1:
+            print("--LOG: OD")
+            self.log_print_data(self.dataOD)
+            print('--LOG: OS')
+            self.log_print_data(self.dataOS)
 
     def get_baseline(self, data):
         sum = [0] * int(self.headers['Waveforms'])
@@ -165,55 +167,65 @@ class DataFile:
         startidx = xvals.index(A_WAVE_START)
         endidx = xvals.index(A_WAVE_END)
 
-        print(data[startidx])
-        print(data[endidx])
+        if log:
+            print("--LOG: Starting data for A-wave fit - " + str(data[startidx]))
+            print("--LOG: Ending data for A-wave fit - " + str(data[endidx]))
 
         # for i in range(int(self.headers['Waveforms'])):
-        for i in [COL_TO_PLOT]:
+        if COL_TO_PLOT >= int(self.headers['Waveforms']):
+            print("--ERROR: COL_TO_PLOT is larger than the number of columns")
+            quit()
+        for i in [COL_TO_PLOT]: #if only doing fitting for plotting
+
             yvals = [line[1][i] for line in data[startidx:endidx]]
             minval = min(yvals)
             minidx = yvals.index(minval)
-            print(minidx)
-            print(yvals[minidx])
-            print(data[minidx + startidx])
+            if log:
+                print("--LOG: minimum value found at index" + str(minidx) + " values: " + str(yvals[minidx]))
+                print("--LOG: Data between start and minimum" + str(data[minidx + startidx]))
 
-            endcurveval = minval #* 0.8
+            endcurveval = minval * 0.8
             endcurveidx = 0
             for j in range(minidx):
                 if yvals[j] >= endcurveval >= yvals[j+1]:
                     endcurveidx = j
-                    print("found at " + str(j))
+                    if log:
+                        print("--LOG: minimum * 0.8 found at index: " + str(j))
                     break
-            print(data[startidx + endcurveidx])
-
+            # print(data[startidx + endcurveidx])
 
             curvexvals = xvals[startidx:startidx + endcurveidx + 1]
             curveyvals = yvals[:endcurveidx + 1]
 
-            print("")
-            print(curvexvals)
-            print(curveyvals)
-            # print(xvals)
+            if log:
+                print("")
+                print("--LOG: x vals used for curve fitting: " + str(curvexvals))
+                print("--LOG: y vals used for curve fitting: " + str(curveyvals))
             # testy = a_wave_func(curvexvals,1,2)
             # print(testy)
 
             # print(a_wave_func(110, 1, 1))
 
-            popt, pcov = curve_fit(a_wave_func, curvexvals, curveyvals, p0=(-500, 0, 80), bounds=([minval, 0. , 40.], [3., 20., 400]))
+            popt, pcov = curve_fit(a_wave_func, curvexvals, curveyvals, p0=(minval, 0, 80), bounds=([minval, 0. , 40.], [3., 20., 400]))
             # popt, pcov = curve_fit(a_wave_func, [1,2,3,4,5], [1,2,3,4,5])
-            print(popt)
+            if log:
+                print("--LOG: values used for A-wave curve function" + str(popt))
             plt.plot(xvals, [a_wave_func(val, *popt) for val in xvals], 'r')
             # plt.plot(xvals, [a_wave_func(val, -760, 1, 10) for val in xvals], 'r')
 
 
     def plot(self, data, color):
+        if COL_TO_PLOT >= int(self.headers['Waveforms']):
+            print("--ERROR: COL_TO_PLOT is larger than the number of columns")
+            quit()
+
         xvals = [line[0] for line in data]
         yvals = [line[1][COL_TO_PLOT] for line in data]
 
         # basexvals = [line[0] for line in self.dataOD]
         # baseyvals = [line[-1] for line in self.dataOD]
 
-        
+
 
         plt.plot(xvals, yvals, color)
         # plt.plot(basexvals, baseyvals,'g')
@@ -284,6 +296,10 @@ for opt, arg in opts:
     elif opt in ("-l", "--log"):
         log = int(arg)
 
-d = DataFile(inputfile) if inputfile != "" else  DataFile(read_sheets())
+if inputfile == "":
+    inputfile = read_sheets()
+
+d = DataFile(inputfile)
+root.update()
 
 plt.show()
