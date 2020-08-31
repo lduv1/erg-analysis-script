@@ -4,7 +4,7 @@ root.title("root")
 
 import csv
 import numpy as np
-import sys, getopt
+import sys, getopt, os
 
 
 from scipy import signal
@@ -25,6 +25,31 @@ A_WAVE_END = 300.0        #milisecond the A wave ends at
 
 COL_TO_PLOT = 3         #column of data in sheet file to plot
 
+OUTPUT_DIRECTORY = "csv_out"
+
+#lookup dict light_intenisty in log(cd*s/m^2)
+LIGHT_INTENSITY = {
+    #dark adapted dim sheet
+    '50mA-OD3-20us' : -4.64,
+    '50mA-OD3-40us' : -3.93,
+    '50mA-OD3-200us--3.3' :	-3.06,
+    '50mA-OD3-400us' : -2.74,
+    '50mA-OD3-800us' : -2.43,
+    '50mA-OD3-3000us' : -1.85,
+    #dark adapted bright sheet
+    '50mA-20us--1.84' : -1.64,
+    '50mA-40us' : -0.93,
+    '50mA-200us--0.3' : -0.06,
+    '900mA-100us-0.36' : 0.63,
+    '900mA-400us' : 1.24,
+    '900mA-2000us-1.71' : 1.93,
+    '900mA-6000us-2.07' : 2.41,
+    #light adapted
+    '900mA-100us-bkg-200mA' : 0.63,
+    '900mA-400us-bkg-200mA' : 1.24,
+    '900mA-2000us-bkg-200mA' : 1.93,
+    '900mA-6000us-bkg-200mA' : 2.41
+}
 
 def a_wave_func(x,a,b,c):
     # xx = x**2
@@ -55,22 +80,32 @@ class DataFile:
         # print(headers)
         # print(data)
         # print(self.filename)
+        newHeaders = ['ms'] + [str(LIGHT_INTENSITY[header]) for header in headers[1:]]
 
-        with open('csv_out/' + newFileName, 'w', newline='') as newCsvFile:
+        if not os.path.exists(OUTPUT_DIRECTORY):
+            os.mkdir(OUTPUT_DIRECTORY)
+
+        with open(OUTPUT_DIRECTORY + '/' + newFileName, 'w', newline='') as newCsvFile:
             outfile = csv.writer(newCsvFile, dialect='excel') 
-            outfile.writerow(headers)
+            outfile.writerow(newHeaders)
             for line in data:
                 # print(line)
                 outfile.writerow([line[0]] + [item for item in line[1]])
+        if log:
+            print("--LOG: wrote file " + newFileName)
     
     def csv_print_both_data(self, headers, OD, OS, fileNameAddition):
         newFileName = self.filename.split('/')[-1].split('.')[-2] + '_' + fileNameAddition + ".csv"
+        newHeaders = ['ms'] + [str(LIGHT_INTENSITY[header]) for header in headers[1:]]
 
-        with open('csv_out/' + newFileName, 'w', newline='') as newCsvFile:
+        if not os.path.exists(OUTPUT_DIRECTORY):
+            os.mkdir(OUTPUT_DIRECTORY)
+
+        with open(OUTPUT_DIRECTORY +'/' + newFileName, 'w', newline='') as newCsvFile:
             outfile = csv.writer(newCsvFile, dialect='excel')
 
-            hrow = [headers[0]]
-            for header in headers[1:]:
+            hrow = [newHeaders[0]]
+            for header in newHeaders[1:]:
                 hrow += ['OD ' + header]
                 hrow += ['OS ' + header]
             outfile.writerow(hrow)
@@ -81,6 +116,8 @@ class DataFile:
                     row += [lineA[1][i]]
                     row += [lineB[1][i]]
                 outfile.writerow(row)
+        if log:
+            print("--LOG: wrote file " + newFileName)
 
 
     def parse_headers(self, csvInput):
@@ -206,7 +243,7 @@ class DataFile:
 
             # print(a_wave_func(110, 1, 1))
 
-            popt, pcov = curve_fit(a_wave_func, curvexvals, curveyvals, p0=(minval, 0, 80), bounds=([minval, 0. , 40.], [3., 20., 400]))
+            popt, pcov = curve_fit(a_wave_func, curvexvals, curveyvals, p0=(minval*2, 0, 80), bounds=([minval*2, 0. , 40.], [3., 20., 400]))
             # popt, pcov = curve_fit(a_wave_func, [1,2,3,4,5], [1,2,3,4,5])
             if log:
                 print("--LOG: values used for A-wave curve function" + str(popt))
@@ -263,17 +300,21 @@ class DataFile:
         # print(ODBase)
         # self.log_print_data(ODRebased)
 
-        self.csv_print_data(self.dataHeaders, self.dataOD, "ODparsed")
-        self.csv_print_data(self.dataHeaders, self.dataOS, "OSparsed")
-        self.csv_print_data(self.dataHeaders, ODRebased, "rebased")
+        
 
-        self.csv_print_both_data(self.dataHeaders, self.dataOD, self.dataOS, "both")
 
         # self.filter_data(ODRebased)
         OSFiltered = self.filter_data(OSRebased)
         self.a_wave_fit(OSRebased)
 
+
+        self.csv_print_data(self.dataHeaders, self.dataOD, "ODparsed")
+        self.csv_print_data(self.dataHeaders, self.dataOS, "OSparsed")
+        self.csv_print_data(self.dataHeaders, ODRebased, "rebased")
         self.csv_print_data(self.dataHeaders,OSFiltered,"filtered")
+        self.csv_print_both_data(self.dataHeaders, self.dataOD, self.dataOS, "both")
+
+
         self.plot(OSRebased, 'b')
         self.plot(OSFiltered, 'k')
         # self.plot(self.dataOD)
@@ -284,7 +325,7 @@ class DataFile:
 
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:],"f:l:",["file=", "log="])
+    opts, args = getopt.getopt(sys.argv[1:],"f:l:c:",["file=", "log=", "col="])
 except getopt.GetoptError:
     print("Command Line Error")
 
@@ -295,6 +336,8 @@ for opt, arg in opts:
         inputfile = arg
     elif opt in ("-l", "--log"):
         log = int(arg)
+    elif opt in ("-c", "--col"):
+        COL_TO_PLOT = int(arg)
 
 if inputfile == "":
     inputfile = read_sheets()
