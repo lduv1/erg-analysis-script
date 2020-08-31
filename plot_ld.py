@@ -39,9 +39,11 @@ LIGHT_INTENSITY = {
     #dark adapted bright sheet
     '50mA-20us--1.84' : -1.64,
     '50mA-40us' : -0.93,
+    '50mA-40us--1.16' : -0.93,
     '50mA-200us--0.3' : -0.06,
     '900mA-100us-0.36' : 0.63,
     '900mA-400us' : 1.24,
+    '900mA-400us-1.1' : 1.24,
     '900mA-2000us-1.71' : 1.93,
     '900mA-6000us-2.07' : 2.41,
     #light adapted
