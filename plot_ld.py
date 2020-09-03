@@ -23,7 +23,7 @@ STRIP_END = 10.0        #miliseconds to strip from the end of the data
 A_WAVE_START = 105.0      #milisecond the A wave starts at
 A_WAVE_END = 300.0        #milisecond the A wave ends at
 
-COL_TO_PLOT = 3         #column of data in sheet file to plot
+COL_TO_PLOT = -1         #column of data in sheet file to plot
 
 OUTPUT_DIRECTORY = "csv_out"
 
@@ -52,6 +52,8 @@ LIGHT_INTENSITY = {
     '900mA-2000us-bkg-200mA' : 1.93,
     '900mA-6000us-bkg-200mA' : 2.41
 }
+
+PLOT_NUM = 1
 
 def a_wave_func(x,a,b,c):
     # xx = x**2
@@ -201,7 +203,7 @@ class DataFile:
 
         
 
-    def a_wave_fit(self, data):
+    def a_wave_fit(self, data, col):
 
         xvals = [line[0] for line in data]
         startidx = xvals.index(A_WAVE_START)
@@ -212,10 +214,10 @@ class DataFile:
             print("--LOG: Ending data for A-wave fit - " + str(data[endidx]))
 
         # for i in range(int(self.headers['Waveforms'])):
-        if COL_TO_PLOT >= int(self.headers['Waveforms']):
+        if col >= int(self.headers['Waveforms']):
             print("--ERROR: COL_TO_PLOT is larger than the number of columns")
             quit()
-        for i in [COL_TO_PLOT]: #if only doing fitting for plotting
+        for i in [col]: #if only doing fitting for plotting
 
             yvals = [line[1][i] for line in data[startidx:endidx]]
             minval = min(yvals)
@@ -250,22 +252,20 @@ class DataFile:
             # popt, pcov = curve_fit(a_wave_func, [1,2,3,4,5], [1,2,3,4,5])
             if log:
                 print("--LOG: values used for A-wave curve function" + str(popt))
-            plt.plot(xvals, [a_wave_func(val, *popt) for val in xvals], 'r')
+            plt.plot(xvals[startidx:], [a_wave_func(val, *popt) for val in xvals[startidx:]], 'r')
             # plt.plot(xvals, [a_wave_func(val, -760, 1, 10) for val in xvals], 'r')
 
 
-    def plot(self, data, color):
-        if COL_TO_PLOT >= int(self.headers['Waveforms']):
-            print("--ERROR: COL_TO_PLOT is larger than the number of columns")
+    def plot(self, data, color, col):
+        if col >= int(self.headers['Waveforms']):
+            print("--ERROR: col is larger than the number of columns")
             quit()
 
         xvals = [line[0] for line in data]
-        yvals = [line[1][COL_TO_PLOT] for line in data]
+        yvals = [line[1][col] for line in data]
 
         # basexvals = [line[0] for line in self.dataOD]
         # baseyvals = [line[-1] for line in self.dataOD]
-
-
 
         plt.plot(xvals, yvals, color)
         # plt.plot(basexvals, baseyvals,'g')
@@ -282,6 +282,7 @@ class DataFile:
         self.dataOS = []
         self.dataHeaders = []
         self.headers = {}
+        self.fignum = 1
 
         if filename == "":
             print("File Does not exist")
@@ -297,32 +298,41 @@ class DataFile:
 
         ODBase = self.get_baseline(self.dataOD)
         ODRebased = self.strip_and_rebase(self.dataOD, ODBase)
+        ODFiltered = self.filter_data(ODRebased)
 
         OSBase = self.get_baseline(self.dataOS)
         OSRebased = self.strip_and_rebase(self.dataOS, OSBase)
-        # print(ODBase)
-        # self.log_print_data(ODRebased)
+        OSFiltered = self.filter_data(OSRebased)
 
         
-
-
-        # self.filter_data(ODRebased)
-        OSFiltered = self.filter_data(OSRebased)
-        self.a_wave_fit(OSRebased)
-
-
         self.csv_print_data(self.dataHeaders, self.dataOD, "ODparsed")
         self.csv_print_data(self.dataHeaders, self.dataOS, "OSparsed")
         self.csv_print_data(self.dataHeaders, ODRebased, "rebased")
-        self.csv_print_data(self.dataHeaders,OSFiltered,"filtered")
+        self.csv_print_data(self.dataHeaders, OSFiltered,"filtered")
         self.csv_print_both_data(self.dataHeaders, self.dataOD, self.dataOS, "both")
+        self.csv_print_both_data(self.dataHeaders, ODRebased, OSRebased, "both_rebased")
+        self.csv_print_both_data(self.dataHeaders, ODFiltered, OSFiltered, "both_filtered")
 
+        cols = []
+        if COL_TO_PLOT >= 0: #plot one column
+            cols = [COL_TO_PLOT]
+        else : #plot all columns
+            cols = range(int(self.headers['Waveforms']))
 
-        self.plot(OSRebased, 'b')
-        self.plot(OSFiltered, 'k')
-        # self.plot(self.dataOD)
+        for i in cols:
+            plt.figure(self.fignum)
+            self.fignum += 1
+            plt.suptitle("OD - " + str(LIGHT_INTENSITY[self.dataHeaders[i+1]]))
+            self.plot(ODRebased, 'b', i)
+            self.plot(ODFiltered, 'k', i)
+            self.a_wave_fit(ODRebased, i)
 
-
+            plt.figure(self.fignum)
+            self.fignum += 1
+            plt.suptitle("OS - " + str(LIGHT_INTENSITY[self.dataHeaders[i+1]]))
+            self.plot(OSRebased, 'b', i)
+            self.plot(OSFiltered, 'k', i)
+            self.a_wave_fit(OSRebased, i)
 
         
 
