@@ -1,2 +1,4 @@
 *.sheet
 *.csv
+
+.DS_Store
