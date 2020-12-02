@@ -357,7 +357,7 @@ def usage():
 
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:],"h:f:l:c:li",["help","file=", "log=", "col=","light"])
+    opts, args = getopt.getopt(sys.argv[1:],"h:f:l:c:i",["help","file=", "log=", "col=","light"])
 except getopt.GetoptError:
     usage()
     sys.exit()
@@ -375,7 +375,7 @@ for opt, arg in opts:
         log = int(arg)
     elif opt in ("-c", "--col"):
         COL_TO_PLOT = int(arg)
-    elif opt in ("-li", "--light"):
+    elif opt in ("-i", "--light"):
         USE_LIGHT_INTENSITY = 1
 
 
