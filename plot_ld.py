@@ -333,16 +333,17 @@ class DataFile:
             cols = range(int(self.headers['Waveforms']))
 
         for i in cols:
-            plt.figure(self.fignum)
+            plotHeader = self.get_header(self.dataHeaders[i+1])
+            plt.figure("OD " + plotHeader)
             self.fignum += 1
-            plt.suptitle("OD " + self.get_header(self.dataHeaders[i+1]))
+            plt.suptitle("OD " + plotHeader)
             self.plot(ODRebased, 'b', i)
             self.plot(ODFiltered, 'k', i)
             self.a_wave_fit(ODRebased, i)
 
-            plt.figure(self.fignum)
+            plt.figure("OS " + plotHeader)
             self.fignum += 1
-            plt.suptitle("OS " + self.get_header(self.dataHeaders[i+1]))
+            plt.suptitle("OS " + plotHeader)
             self.plot(OSRebased, 'b', i)
             self.plot(OSFiltered, 'k', i)
             self.a_wave_fit(OSRebased, i)
