@@ -40,9 +40,11 @@ LIGHT_INTENSITY = {
     #dark adapted bright sheet
     '50mA-20us--1.84' : -1.64,
     '50mA-40us' : -0.93,
+    '50mA-40us--1.16' : -0.93,
     '50mA-200us--0.3' : -0.06,
     '900mA-100us-0.36' : 0.63,
     '900mA-400us' : 1.24,
+    '900mA-400us-1.1' : 1.24,
     '900mA-2000us-1.71' : 1.93,
     '900mA-6000us-2.07' : 2.41,
     #light adapted
@@ -62,8 +64,9 @@ def a_wave_func(x,a,b,c):
     # return a * (1 - np.exp(x) * b)
     # return a * (1 - np.exp(b * x))
     # return a * np.exp(-b * x**2)
+    # return a * (1 - np.exp(-0.01738 * b * (x-c)**2))
 
-    return a * (1 - np.exp(-0.01738 * b * (x-c)**2))
+    return a * (1 - np.exp(b * (x-c)**2))
 
 #Locate sheet files
 def read_sheets():
@@ -258,7 +261,7 @@ class DataFile:
 
             # print(a_wave_func(110, 1, 1))
 
-            popt, pcov = curve_fit(a_wave_func, curvexvals, curveyvals, p0=(minval*2, 0, 80), bounds=([minval*2, 0. , 40.], [3., 20., 400]))
+            popt, pcov = curve_fit(a_wave_func, curvexvals, curveyvals, p0=(minval*2, 0, 80), bounds=([minval*2, -0.4 , 40.], [3., 0., 400]))
             # popt, pcov = curve_fit(a_wave_func, [1,2,3,4,5], [1,2,3,4,5])
             if log:
                 print("--LOG: values used for A-wave curve function" + str(popt))
