@@ -353,11 +353,11 @@ def usage():
     print("-f, --file [FILENAME]: define the file to use")
     print("-l, --log [LOGLEVEL]: print logs up to the log level")
     print("-c, --col [COLNUMBER]: plot only a single column")
-    print("-li, --light: use the light intensity conversion for column headers")
+    print("-i, --intensity: use the light intensity conversion for column headers")
 
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:],"h:f:l:c:i",["help","file=", "log=", "col=","light"])
+    opts, args = getopt.getopt(sys.argv[1:],"h:f:l:c:i",["help","file=", "log=", "col=","intensity"])
 except getopt.GetoptError:
     usage()
     sys.exit()
@@ -375,7 +375,7 @@ for opt, arg in opts:
         log = int(arg)
     elif opt in ("-c", "--col"):
         COL_TO_PLOT = int(arg)
-    elif opt in ("-i", "--light"):
+    elif opt in ("-i", "--intensity"):
         USE_LIGHT_INTENSITY = 1
 
 
