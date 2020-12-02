@@ -28,6 +28,7 @@ COL_TO_PLOT = -1         #column of data in sheet file to plot
 OUTPUT_DIRECTORY = "csv_out"
 
 #lookup dict light_intenisty in log(cd*s/m^2)
+USE_LIGHT_INTENSITY = 0
 LIGHT_INTENSITY = {
     #dark adapted dim sheet
     '50mA-OD3-20us' : -4.64,
@@ -82,7 +83,7 @@ class DataFile:
         # print(headers)
         # print(data)
         # print(self.filename)
-        newHeaders = ['ms'] + [str(LIGHT_INTENSITY[header]) for header in headers[1:]]
+        newHeaders = ['ms'] + self.get_headers(headers)
 
         if not os.path.exists(OUTPUT_DIRECTORY):
             os.mkdir(OUTPUT_DIRECTORY)
@@ -98,7 +99,7 @@ class DataFile:
     
     def csv_print_both_data(self, headers, OD, OS, fileNameAddition):
         newFileName = self.filename.split('/')[-1].split('.')[-2] + '_' + fileNameAddition + ".csv"
-        newHeaders = ['ms'] + [str(LIGHT_INTENSITY[header]) for header in headers[1:]]
+        newHeaders = ['ms'] + self.get_headers(headers)
 
         if not os.path.exists(OUTPUT_DIRECTORY):
             os.mkdir(OUTPUT_DIRECTORY)
@@ -130,6 +131,18 @@ class DataFile:
         #ignore csvInput[2], useless header
         self.headers["Interval"] = int(csvInput[3][-1])
         self.headers["MaxTime"] = int(self.headers["DataPoints"]) * (self.headers["Interval"] * 0.001)
+    
+    def get_headers(self, headers):
+        if USE_LIGHT_INTENSITY == 1:
+            return [str(LIGHT_INTENSITY[header]) for header in headers[1:]]
+        
+        return [header for header in headers[1:]]
+    
+    def get_header(self, header):
+        if USE_LIGHT_INTENSITY == 1:
+            return str(LIGHT_INTENSITY[header])
+        
+        return header
 
     def parse_data(self, csvInput):
         ODStart, ODEnd = 5, 6 + int(self.headers['DataPoints'])
@@ -319,35 +332,49 @@ class DataFile:
         for i in cols:
             plt.figure(self.fignum)
             self.fignum += 1
-            plt.suptitle("OD - " + str(LIGHT_INTENSITY[self.dataHeaders[i+1]]))
+            plt.suptitle("OD " + self.get_header(self.dataHeaders[i+1]))
             self.plot(ODRebased, 'b', i)
             self.plot(ODFiltered, 'k', i)
             self.a_wave_fit(ODRebased, i)
 
             plt.figure(self.fignum)
             self.fignum += 1
-            plt.suptitle("OS - " + str(LIGHT_INTENSITY[self.dataHeaders[i+1]]))
+            plt.suptitle("OS " + self.get_header(self.dataHeaders[i+1]))
             self.plot(OSRebased, 'b', i)
             self.plot(OSFiltered, 'k', i)
             self.a_wave_fit(OSRebased, i)
 
-        
+def usage():
+    print("-h, --help: print help")
+    print("-f, --file [FILENAME]: define the file to use")
+    print("-l, --log [LOGLEVEL]: print logs up to the log level")
+    print("-c, --col [COLNUMBER]: plot only a single column")
+    print("-li, --light: use the light intensity conversion for column headers")
 
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:],"f:l:c:",["file=", "log=", "col="])
+    opts, args = getopt.getopt(sys.argv[1:],"h:f:l:c:li",["help","file=", "log=", "col=","light"])
 except getopt.GetoptError:
-    print("Command Line Error")
+    usage()
+    sys.exit()
+
 
 inputfile = ""
 log = 0
 for opt, arg in opts:
-    if opt in ("-f", "--file"):
+    if opt in ("-h", "--help"):
+        usage()
+        sys.exit()
+    elif opt in ("-f", "--file"):
         inputfile = arg
     elif opt in ("-l", "--log"):
         log = int(arg)
     elif opt in ("-c", "--col"):
         COL_TO_PLOT = int(arg)
+    elif opt in ("-li", "--light"):
+        USE_LIGHT_INTENSITY = 1
+
+
 
 if inputfile == "":
     inputfile = read_sheets()
