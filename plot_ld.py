@@ -223,6 +223,7 @@ class DataFile:
         endidx = xvals.index(A_WAVE_END)
 
         if log:
+            print("--LOG: Column - " + str(self.dataHeaders[col]))
             print("--LOG: Starting data for A-wave fit - " + str(data[startidx]))
             print("--LOG: Ending data for A-wave fit - " + str(data[endidx]))
 
